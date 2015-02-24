@@ -196,10 +196,11 @@ define(
             /**
              * Remove an item from the list
              * @param {List.Item} item
+             * @param message
              */
-            removeItem: function (item) {
+            removeItem: function (item, message) {
                 //Confirm delete
-                var confirmMsg = this.schema.confirmDelete;
+                var confirmMsg = message;
                 if (confirmMsg && !confirm(confirmMsg)) {
                     return;
                 }
@@ -311,7 +312,8 @@ define(
             events: {
                 'click [data-action="remove"]': function (event) {
                     event.preventDefault();
-                    this.list.removeItem(this);
+                    var message= this.value.meta.confirmDelete;
+	                this.list.removeItem(this, message);
                 },
                 'keydown input[type=text]': function (event) {
                     if (event.keyCode != 13) return;

@@ -32,6 +32,8 @@ define(
 			toString: function() {
 				var display = this.get("display");
 				var name = this.get("name");
+				var display2 = this.get("display");
+				var name2 = this.get("name");
 				
 				this.fetch({async:false, success: function(loc) {
 					if(loc !== null && loc != undefined) {
@@ -47,6 +49,14 @@ define(
 							if(name !== null && name !== undefined) {
 								name = "&nbsp;&nbsp;" + name;
 							}
+							$.ajax({url:parentLoc.links[0].uri, dataType:"json", async:false, success: function(pLoc) {
+								if(pLoc !== null && pLoc != undefined) {
+									if(pLoc.parentLocation !== null && pLoc.parentLocation !== undefined) {
+										display = "&nbsp;&nbsp;&nbsp;&nbsp;" + display2;
+										name = "&nbsp;&nbsp;&nbsp;&nbsp;" + name2;
+									}
+								}
+							}});
 						}
 					}
 				}});

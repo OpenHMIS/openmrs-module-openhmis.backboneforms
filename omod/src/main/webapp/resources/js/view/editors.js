@@ -252,8 +252,9 @@ define(
 														var hierarchicalLocations = new Backbone.Collection();
 														// Render the options
 														// once complete
-
-														for (i = 0; i < self.schema.options.length; i++) {
+														self.schema.options.models = reorganizeLocationModels(self.schema.options.models);
+														
+														for (i = 0; i < self.schema.options.models.length; i++) {
 															organizeLocationHierarchicallyFrom(
 																	self.schema.options.models[i],
 																	hierarchicalLocations);
@@ -513,81 +514,182 @@ define(
 			return editors;
 		});
 
-function organizeLocationHierarchicallyFrom(location, hierarchicalLocations) {
-	var loc;
-	var parentChildren;
-	var children;
-	var parent;
-
-	if (location !== null && location !== undefined) {
-		if (location.uuid === undefined && location.links === undefined) {
-			location.fetch({
-				async : false,
-				success : function(fetchedLoc) {
-					loc = fetchedLoc;
-				}
-			});
-
-			children = loc === undefined || loc === null ? undefined : loc
-					.get("childLocations");
-			parent = loc === undefined || loc === null ? undefined : loc
-					.get("parentLocation");
-		} else {
-			$.ajax({
-				async : false,
-				url : location.links[0].uri,
-				dataType : "json",
-				success : function(fetchedLoc) {
-					loc = fetchedLoc;
-				}
-			});
-
-			children = loc === undefined || loc === null ? undefined
-					: loc.childLocations;
-			parent = loc === undefined || loc === null ? undefined
-					: loc.parentLocation;
-		}
-
-		if (parent !== undefined && parent !== null) {
-			$.ajax({
-				async : false,
-				url : parent.links[0].uri,
-				dataType : "json",
-				success : function(fetchedLoc) {
-					parentChildren = fetchedLoc.childLocations;
-				}
-			});
-		}
-		if (parent !== null && parent !== undefined
-				&& !hierarchicalLocations.contains(parent)) {
-			hierarchicalLocations.add(parent);
-			if (parentChildren !== null && parentChildren !== undefined
-					&& parentChildren.length > 0
-					&& !hierarchicalLocations.contains(parentChildren)) {
-				for (j = 0; j < parentChildren.length; j++) {
-					var parentChild = parentChildren[j];
-
-					if (parentChild !== null && parentChild !== undefined
-							&& !hierarchicalLocations.contains(parentChild)) {
-						hierarchicalLocations.add(parentChild);
+	function organizeLocationHierarchicallyFrom(location, hierarchicalLocations) {
+		var loc;
+		var parentChildren;
+		var children;
+		var parent;
+		
+		if (location !== null && location !== undefined) {
+			if (location.uuid === undefined && location.links === undefined) {
+				location.fetch({
+					async : false,
+					success : function(fetchedLoc) {
+						loc = fetchedLoc;
+					}
+				});
+	
+				children = loc === undefined || loc === null ? undefined : loc
+						.get("childLocations");
+				parent = loc === undefined || loc === null ? undefined : loc
+						.get("parentLocation");
+			} else {
+				$.ajax({
+					async : false,
+					url : location.links[0].uri,
+					dataType : "json",
+					success : function(fetchedLoc) {
+						loc = fetchedLoc;
+					}
+				});
+	
+				children = loc === undefined || loc === null ? undefined
+						: loc.childLocations;
+				parent = loc === undefined || loc === null ? undefined
+						: loc.parentLocation;
+			}
+	
+			if (parent !== undefined && parent !== null) {
+				$.ajax({
+					async : false,
+					url : parent.links[0].uri,
+					dataType : "json",
+					success : function(fetchedLoc) {
+						parentChildren = fetchedLoc.childLocations;
+					}
+				});
+			}
+			
+			if (parent !== null && parent !== undefined) {
+				var rightParent = recreateRightModelObject(parent.name, parent.display, parent.uuid, parent.links[0].uri);
+				
+				if(!hierarchicalLocations.contains(rightParent)) {
+					hierarchicalLocations.add(rightParent);
+					if (parentChildren !== null && parentChildren !== undefined
+							&& parentChildren.length > 0) {
+						for (j = 0; j < parentChildren.length; j++) {
+							var parentChild = parentChildren[j];
+		
+							if (parentChild !== null && parentChild !== undefined) {
+								var rightParentChild = recreateRightModelObject(parentChild.name, parentChild.display, parentChild.uuid, parentChild.links[0].uri);
+								
+								if(!hierarchicalLocations.contains(rightParentChild)) {
+									hierarchicalLocations.add(rightParentChild);
+								}
+							}
+						}
 					}
 				}
 			}
-		}
-		if (children !== null && children !== undefined && children.length > 0
-				&& !hierarchicalLocations.contains(children)) {
-			for (j = 0; j < children.length; j++) {
-				var child = children[j];
-
-				if (child !== null && child !== undefined
-						&& !hierarchicalLocations.contains(child)) {
-					hierarchicalLocations.add(child);
+			
+			var rightLocation = recreateRightModelObject(loc.get("name") || loc.name, loc.get("display") || loc.display, loc.get("uuid") || loc.uuid, loc.get("links") || loc.links[0].uri);
+			
+			if (children !== null && children !== undefined && children.length > 0) {
+				if (loc !== null && loc !== undefined
+						&& !hierarchicalLocations.contains(rightLocation)) {
+					hierarchicalLocations.add(rightLocation);
+				}
+				for (j = 0; j < children.length; j++) {
+					var child = children[j];
+	
+					if (child !== null && child !== undefined) {
+						var rightChild = recreateRightModelObject(child.name, child.display, child.uuid, child.links[0].uri);
+						
+						if(!hierarchicalLocations.contains(rightChild)) {
+							var childChildren;
+							
+							hierarchicalLocations.add(rightChild);
+							$.ajax({
+								async : false,
+								url : rightChild.get("links")[0].uri,
+								dataType : "json",
+								success : function(fetchedLoc) {
+									childChildren = fetchedLoc.childLocations;
+								}
+							});
+							if(childChildren !== (null || undefined)) {
+								for(l = 0; l < childChildren.length; l++) {
+									var childChild = childChildren[l];
+									var rightChildChild = recreateRightModelObject(childChild.name, childChild.display, childChild.uuid, childChild.links[0].uri);
+									
+									if(!hierarchicalLocations.contains(rightChildChild)) {
+										hierarchicalLocations.add(rightChildChild);
+									}
+								}
+							}
+						}
+					}
 				}
 			}
-		}
-		if (loc !== null && loc !== undefined
-				&& !hierarchicalLocations.contains(loc)) {
-			hierarchicalLocations.add(loc);
+			if (loc !== null && loc !== undefined
+					&& !hierarchicalLocations.contains(rightLocation)) {
+				hierarchicalLocations.add(rightLocation);
+			}
 		}
 	}
-}
+	
+	function recreateRightModelObject(name, display, uuid, link) {
+		var model = new openhmis.Location();
+		
+		model.id = uuid;
+		model.set("name", name);
+		model.set("uuid", uuid);
+		model.set("display", display);
+		model.set("links", [{"uri":link}]);
+		
+		return model;
+	}
+	
+	/**
+	 * Organizes location models in order, super parents with no parent but children, parents with both parents and children and lastly children with no parents
+	 */
+	function reorganizeLocationModels(locationModels) {
+		if(locationModels !== null && locationModels !== undefined && locationModels.length > 0) {
+			//self.schema.options.models
+			var hasNoParentsAndNoChildren = new Backbone.Collection();	
+			var hasNoParentsButChildren = new Backbone.Collection();
+			var hasParentButNoChildren = new Backbone.Collection();
+			var hasChildrenAndParent = new Backbone.Collection();
+			var theRest = new Backbone.Collection();
+			var newLocationModels = new Backbone.Collection();
+			var previousLength = locationModels.length;
+			
+			for(i = 0; i < previousLength; i++) {
+				var location = locationModels[i];
+				var loc;
+					
+				location.fetch({
+					async : false,
+					success : function(fetchedLoc) {
+						loc = fetchedLoc;
+					}
+				});
+				if(loc !== null || undefined && location !== null || undefined) {
+					if(((loc.get("parentLocation") || loc.parentLocation) === (null || undefined)) && ((loc.get("childLocations") || loc.childLocations) === (null || undefined))) {//has no parent and no children
+						hasNoParentsAndNoChildren.add(location);
+					} else if(((loc.get("parentLocation") || loc.parentLocation) === (null || undefined)) && ((loc.get("childLocations") || loc.childLocations) !== (null || undefined))) {//has no parent but has children
+						hasNoParentsButChildren.add(location);
+					} else if(((loc.get("parentLocation") || loc.parentLocation) !== (null || undefined)) && ((loc.get("childLocations") || loc.childLocations) === (null || undefined))) {//has parent and no children
+						hasParentButNoChildren.add(location);
+					} else if(((loc.get("parentLocation") || loc.parentLocation) !== (null || undefined)) && ((loc.get("childLocations") || loc.childLocations) !== (null || undefined))) {//has parent and children
+						hasChildrenAndParent.add(location);
+					} else {
+						theRest.add(location);
+					}
+				} else {
+					theRest.add(location);
+				}
+			}
+			newLocationModels.add(hasNoParentsButChildren.models);
+			newLocationModels.add(hasChildrenAndParent.models);
+			newLocationModels.add(hasParentButNoChildren.models);
+			newLocationModels.add(hasNoParentsAndNoChildren.models);
+			newLocationModels.add(theRest.models);
+			if(newLocationModels.models.length ===previousLength) {
+				return newLocationModels.models;
+			} else
+				return locationModels;
+		} else {
+			return locationModels;
+		}
+	}

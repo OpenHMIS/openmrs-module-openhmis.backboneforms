@@ -514,6 +514,12 @@ define(
 			return editors;
 		});
 
+	/**
+	 * This organizes categorized/#reorganizeLocationModels(locationModels) models by aligning the parent and children for a location next to it in index
+	 * 
+	 * @param location, a location model that is to be a starting point for this function to organize models and support hierarchical location display
+	 * @param hierarchicalLocations, new collection object to contain the right models afterwards
+	 */
 	function organizeLocationHierarchicallyFrom(location, hierarchicalLocations) {
 		var loc;
 		var parentChildren;
@@ -533,22 +539,8 @@ define(
 						.get("childLocations");
 				parent = loc === undefined || loc === null ? undefined : loc
 						.get("parentLocation");
-			} else {
-				$.ajax({
-					async : false,
-					url : location.links[0].uri,
-					dataType : "json",
-					success : function(fetchedLoc) {
-						loc = fetchedLoc;
-					}
-				});
-	
-				children = loc === undefined || loc === null ? undefined
-						: loc.childLocations;
-				parent = loc === undefined || loc === null ? undefined
-						: loc.parentLocation;
 			}
-	
+			
 			if (parent !== undefined && parent !== null) {
 				$.ajax({
 					async : false,
@@ -560,21 +552,21 @@ define(
 				});
 			}
 			
-			if (parent !== null && parent !== undefined) {
+			if (parent !== null && parent !== undefined) {//true means the location has a parent
 				var rightParent = recreateRightModelObject(parent.name, parent.display, parent.uuid, parent.links[0].uri);
 				
 				if(!hierarchicalLocations.contains(rightParent)) {
-					hierarchicalLocations.add(rightParent);
+					hierarchicalLocations.add(rightParent);//insert the parent first before its inherent locations
 					if (parentChildren !== null && parentChildren !== undefined
 							&& parentChildren.length > 0) {
-						for (j = 0; j < parentChildren.length; j++) {
+						for (j = 0; j < parentChildren.length; j++) {//supports up-to two depth children of a location
 							var parentChild = parentChildren[j];
 		
 							if (parentChild !== null && parentChild !== undefined) {
 								var rightParentChild = recreateRightModelObject(parentChild.name, parentChild.display, parentChild.uuid, parentChild.links[0].uri);
 								
 								if(!hierarchicalLocations.contains(rightParentChild)) {
-									hierarchicalLocations.add(rightParentChild);
+									hierarchicalLocations.add(rightParentChild);//add the children next to their parent location
 								}
 							}
 						}
@@ -582,12 +574,12 @@ define(
 				}
 			}
 			
-			var rightLocation = recreateRightModelObject(loc.get("name") || loc.name, loc.get("display") || loc.display, loc.get("uuid") || loc.uuid, loc.get("links") || loc.links[0].uri);
-			
-			if (children !== null && children !== undefined && children.length > 0) {
+			if (children !== null && children !== undefined && children.length > 0) {//true implies a location has its following inherent/child locations, supports one depth display of children
+				var rightLocation = recreateRightModelObject(loc.get("name"), loc.get("display"), loc.get("uuid"), loc.get("links").links[0].uri);
+				
 				if (loc !== null && loc !== undefined
 						&& !hierarchicalLocations.contains(rightLocation)) {
-					hierarchicalLocations.add(rightLocation);
+					hierarchicalLocations.add(rightLocation);//add
 				}
 				for (j = 0; j < children.length; j++) {
 					var child = children[j];
@@ -598,7 +590,7 @@ define(
 						if(!hierarchicalLocations.contains(rightChild)) {
 							var childChildren;
 							
-							hierarchicalLocations.add(rightChild);
+							hierarchicalLocations.add(rightChild);//adding child next to its parent location
 							$.ajax({
 								async : false,
 								url : rightChild.get("links")[0].uri,
@@ -607,13 +599,13 @@ define(
 									childChildren = fetchedLoc.childLocations;
 								}
 							});
-							if(childChildren !== (null || undefined)) {
+							if(childChildren !== (null || undefined)) {//each child can have other children, add them next to their parent into our collection
 								for(l = 0; l < childChildren.length; l++) {
 									var childChild = childChildren[l];
 									var rightChildChild = recreateRightModelObject(childChild.name, childChild.display, childChild.uuid, childChild.links[0].uri);
 									
 									if(!hierarchicalLocations.contains(rightChildChild)) {
-										hierarchicalLocations.add(rightChildChild);
+										hierarchicalLocations.add(rightChildChild);//adds a child of a child for the current location
 									}
 								}
 							}
@@ -623,11 +615,14 @@ define(
 			}
 			if (loc !== null && loc !== undefined
 					&& !hierarchicalLocations.contains(rightLocation)) {
-				hierarchicalLocations.add(rightLocation);
+				hierarchicalLocations.add(rightLocation);//adds location as a last if it was not added because of having no parent/child locations
 			}
 		}
 	}
 	
+	/**
+	 * Ensures that for every Location we are using the right model object
+	 */
 	function recreateRightModelObject(name, display, uuid, link) {
 		var model = new openhmis.Location();
 		

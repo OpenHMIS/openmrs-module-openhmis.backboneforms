@@ -17,7 +17,6 @@ define(
 		openhmis.url.backboneBase + 'js/lib/i18n'
 	],
 	function(openhmis, __) {
-		//TODO can we re-build the openhmis.Location object to re-order locations?
 		openhmis.Location = openhmis.GenericModel.extend({
 			meta: {
 				name: __("Location"),
@@ -43,7 +42,6 @@ define(
 							
 							name = loc.name;
 							
-							//TODO re-structure this algorithm so that the child locations can appear below their parent and still indented
 							if(parentLoc !== null && parentLoc !== undefined) {
 								if(display !== null && display !== undefined) {
 									display = "&nbsp;&nbsp;" + display;

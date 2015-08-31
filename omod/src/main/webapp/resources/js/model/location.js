@@ -67,5 +67,4 @@ define(
 		});
 
 		return openhmis;
-	}
-);
+		});

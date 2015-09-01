@@ -29,10 +29,42 @@ define(
 			},
 
 			toString: function() {
-				return this.get("display") || this.get("name");
+				var display = this.get("display");
+				var name = this.get("name");
+				var url = this.get("links") === undefined || this.get("links")[0] === undefined ? undefined : this.get("links")[0].uri;
+				var display2 = this.get("display");
+				var name2 = this.get("name");
+				
+				if(url !== undefined) {
+					$.ajax({async:false, dataType:"json", url:url, success: function(loc) {
+						if(loc !== null && loc != undefined) {
+							var parentLoc = loc.parentLocation;
+							
+							name = loc.name;
+							
+							if(parentLoc !== null && parentLoc !== undefined) {
+								if(display !== null && display !== undefined) {
+									display = "&nbsp;&nbsp;" + display;
+								}
+								if(name !== null && name !== undefined) {
+									name = "&nbsp;&nbsp;" + name;
+								}
+								$.ajax({url:parentLoc.links[0].uri, dataType:"json", async:false, success: function(pLoc) {
+									if(pLoc !== null && pLoc != undefined) {
+										if(pLoc.parentLocation !== null && pLoc.parentLocation !== undefined) {
+											display = "&nbsp;&nbsp;&nbsp;&nbsp;" + display2;
+											name = "&nbsp;&nbsp;&nbsp;&nbsp;" + name2;
+										}
+									}
+								}});
+							}
+						}
+					}});
+				}
+				
+				return display || name;
 			}
 		});
 
 		return openhmis;
-	}
-);
+		});
